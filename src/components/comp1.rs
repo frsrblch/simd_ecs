@@ -33,11 +33,11 @@ impl<ID, T> Comp1<ID, T> {
         }
     }
 
-    fn iter(&self) -> impl Iterator<Item=&T> {
+    fn iter(&self) -> impl Iterator<Item = &T> {
         self.values.iter()
     }
 
-    fn iter_mut(&mut self) -> impl Iterator<Item=&mut T> {
+    fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
         self.values.iter_mut()
     }
 
@@ -47,7 +47,12 @@ impl<ID, T> Comp1<ID, T> {
             .for_each(|(a, b)| f(a, b))
     }
 
-    pub fn zip_to_comp1_and_comp1<T2, T3, F: Fn(&mut T, &T2, &T3)>(&mut self, a: &Comp1<ID, T2>, b: &Comp1<ID, T3>, f: F) {
+    pub fn zip_to_comp1_and_comp1<T2, T3, F: Fn(&mut T, &T2, &T3)>(
+        &mut self,
+        a: &Comp1<ID, T2>,
+        b: &Comp1<ID, T3>,
+        f: F,
+    ) {
         self.iter_mut()
             .zip(a.iter())
             .zip(b.iter())
