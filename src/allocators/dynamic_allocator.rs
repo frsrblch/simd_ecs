@@ -42,8 +42,8 @@ impl<T> DynamicAllocator<T> {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct GenId<T> {
-    index: usize,
-    gen: Gen,
+    pub (crate) index: usize,
+    pub (crate) gen: Gen,
     marker: PhantomData<T>,
 }
 

@@ -16,7 +16,7 @@ impl<T> FixedAllocator<T> {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Id<T> {
-    index: usize,
+    pub (crate) index: usize,
     marker: PhantomData<T>,
 }
 
