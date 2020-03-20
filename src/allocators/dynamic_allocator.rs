@@ -84,10 +84,8 @@ mod tests {
         let id0 = a.create();
         let id1 = a.create();
 
-        assert_eq!(0, id0.index);
-        assert_eq!(Gen::default(), id0.gen);
-        assert_eq!(1, id1.index);
-        assert_eq!(Gen::default(), id1.gen);
+        assert_eq!(GenId::new(0, Gen::default()), id0);
+        assert_eq!(GenId::new(1, Gen::default()), id1);
     }
 
     #[test]
@@ -98,9 +96,6 @@ mod tests {
         a.kill(id0);
         let id1 = a.create();
 
-        assert_eq!(0, id0.index);
-        assert_eq!(Gen::default(), id0.gen);
-        assert_eq!(0, id1.index);
-        assert_eq!(Gen::default().next(), id1.gen);
+        assert_eq!(GenId::new(0, Gen::default().next()), id1);
     }
 }
