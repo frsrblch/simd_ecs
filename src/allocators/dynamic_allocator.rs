@@ -1,5 +1,5 @@
-use std::num::NonZeroU32;
 use std::marker::PhantomData;
+use std::num::NonZeroU32;
 
 #[derive(Debug, Default, Clone)]
 pub struct DynamicAllocator<T> {
@@ -33,7 +33,8 @@ impl<T> DynamicAllocator<T> {
     }
 
     pub fn is_valid(&self, id: &GenId<T>) -> bool {
-        self.gen.get(id.index)
+        self.gen
+            .get(id.index)
             .map(|gen| *gen == id.gen)
             .unwrap_or(false)
     }
@@ -48,7 +49,11 @@ pub struct GenId<T> {
 
 impl<T> GenId<T> {
     fn new(index: usize, gen: Gen) -> Self {
-        Self { index, gen, marker: PhantomData }
+        Self {
+            index,
+            gen,
+            marker: PhantomData,
+        }
     }
 }
 
