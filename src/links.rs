@@ -1,5 +1,5 @@
-use std::marker::PhantomData;
 use crate::allocators::*;
+use std::marker::PhantomData;
 
 pub trait Insert<ID, T> {
     fn insert(&mut self, id: ID, value: T);
