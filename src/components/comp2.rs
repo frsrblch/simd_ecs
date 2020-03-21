@@ -36,10 +36,37 @@ impl<ID, T1, T2> Comp2<ID, T1, T2> {
     pub fn len(&self) -> usize {
         self.0.len()
     }
+
+    pub fn zip_to_comp1<T3, F: Fn(&mut T1, &mut T2, &T3)>(&mut self, rhs: &Comp1<ID, T3>, f: F) {
+        self.0.iter_mut()
+            .zip(self.1.iter_mut())
+            .zip(rhs.values.iter())
+            .for_each(|((a, b), c)| f(a, b, c))
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
+    use super::*;
+    use crate::allocators::FixedAllocator;
 
+    #[test]
+    fn zip_to_comp1() {
+        let mut a = FixedAllocator::<()>::default();
+
+        let mut t1 = Comp2::<(), u32, u32>::default();
+        let mut t2 = Comp1::<(), u32>::default();
+
+        let id = a.create();
+        t1.insert(id, (5, 7));
+        t2.insert(id, 2);
+
+        t1.zip_to_comp1(&t2,|a, b, c| {
+            *a += *c;
+            *b += *c;
+        });
+
+        assert_eq!(7, t1.0[0]);
+        assert_eq!(9, t1.1[0]);
+    }
 }

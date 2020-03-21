@@ -2,7 +2,7 @@ use super::*;
 
 #[derive(Debug, Default, Clone)]
 pub struct Comp1<ID, T> {
-    values: Vec<T>,
+    pub values: Vec<T>,
     marker: PhantomData<ID>,
 }
 
