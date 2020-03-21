@@ -22,15 +22,20 @@ impl<ID, T> Insert<&Id<ID>, T> for Comp1<ID, T> {
 
 impl<ID, T> Comp1<ID, T> {
     fn insert_at_index(&mut self, index: usize, value: T) {
-        match self.values.len() {
-            len if len == index => self.values.push(value),
+        debug_assert!(self.len() >= index);
+        match self.len() {
             len if len > index => {
                 if let Some(v) = self.values.get_mut(index) {
                     *v = value;
                 }
             }
+            len if len == index => self.values.push(value),
             _ => {}
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.values.len()
     }
 
     fn iter(&self) -> impl Iterator<Item = &T> {
@@ -57,6 +62,17 @@ impl<ID, T> Comp1<ID, T> {
             .zip(a.iter())
             .zip(b.iter())
             .for_each(|((a, b), c)| f(a, b, c));
+    }
+
+    pub fn zip_to_comp2<T2, T3, F: Fn(&mut T, &T2, &T3)>(
+        &mut self,
+        rhs: &Comp2<ID, T2, T3>,
+        f: F,
+    ) {
+        self.iter_mut()
+            .zip(rhs.0.iter())
+            .zip(rhs.1.iter())
+            .for_each(|((a, b), c)| f(a, b, c))
     }
 }
 
@@ -95,6 +111,23 @@ mod tests {
         t3.insert(id, 5);
 
         t1.zip_to_comp1_and_comp1(&t2, &t3, |a, b, c| *a += *b * *c);
+
+        assert_eq!(17, t1.values[0]);
+    }
+
+    #[test]
+    fn zip_comp1_to_comp2() {
+        let mut a = FixedAllocator::<()>::default();
+
+        let mut t1 = Comp1::<(), u32>::default();
+        let mut t2 = Comp2::<(), u32, u32>::default();
+
+        let id = a.create();
+        t1.insert(id, 2);
+        t2.0.push(3);
+        t2.1.push(5);
+
+        t1.zip_to_comp2(&t2,|a, b, c| *a += *b * *c);
 
         assert_eq!(17, t1.values[0]);
     }
