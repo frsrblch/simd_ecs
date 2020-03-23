@@ -75,17 +75,31 @@ impl<ID, T> Comp1<ID, T> {
             .for_each(|((a, b), c)| f(a, b, c))
     }
 
-    pub fn zip_to_comp2_and_comp1<T2, T3, T4, F: Fn(&mut T, &T2, &T3, &T4)>(
+    pub fn zip_to_comp1_and_comp2<T2, T3, T4, F: Fn(&mut T, &T2, &T3, &T4)>(
+        &mut self,
+        a: &Comp1<ID, T2>,
+        b: &Comp2<ID, T3, T4>,
+        f: F,
+    ) {
+        self.iter_mut()
+            .zip(a.values.iter())
+            .zip(b.0.iter())
+            .zip(b.1.iter())
+            .for_each(|(((a, b), c), d)| f(a, b, c, d))
+    }
+
+    pub fn zip_to_comp2_and_comp2<T2, T3, T4, T5, F: Fn(&mut T, &T2, &T3, &T4, &T5)>(
         &mut self,
         a: &Comp2<ID, T2, T3>,
-        b: &Comp1<ID, T4>,
+        b: &Comp2<ID, T4, T5>,
         f: F,
     ) {
         self.iter_mut()
             .zip(a.0.iter())
             .zip(a.1.iter())
-            .zip(b.values.iter())
-            .for_each(|(((a, b), c), d)| f(a, b, c, d))
+            .zip(b.0.iter())
+            .zip(b.1.iter())
+            .for_each(|((((a, b), c), d), e)| f(a, b, c, d, e))
     }
 }
 
@@ -137,8 +151,7 @@ mod tests {
 
         let id = a.create();
         t1.insert(id, 2);
-        t2.0.push(3);
-        t2.1.push(5);
+        t2.insert(id, (3, 5));
 
         t1.zip_to_comp2(&t2,|a, b, c| *a += *b * *c);
 
@@ -150,16 +163,34 @@ mod tests {
         let mut a = FixedAllocator::<()>::default();
 
         let mut t1 = Comp1::<(), u32>::default();
-        let mut t2 = Comp2::<(), u32, u32>::default();
-        let mut t3 = Comp1::<(), u32>::default();
+        let mut t2 = Comp1::<(), u32>::default();
+        let mut t3 = Comp2::<(), u32, u32>::default();
 
         let id = a.create();
         t1.insert(id, 2);
-        t2.insert(id, (3, 5));
-        t3.insert(id, 7);
+        t2.insert(id, 7);
+        t3.insert(id, (3, 5));
 
-        t1.zip_to_comp2_and_comp1(&t2, &t3,|a, b, c, d| *a += (*b * *c) + *d);
+        t1.zip_to_comp1_and_comp2(&t2, &t3, |a, b, c, d| *a += *b + (*c * *d));
 
         assert_eq!(24, t1.values[0]);
+    }
+
+    #[test]
+    fn zip_to_comp2_and_comp2() {
+        let mut a = FixedAllocator::<()>::default();
+
+        let mut t1 = Comp1::<(), u32>::default();
+        let mut t2 = Comp2::<(), u32, u32>::default();
+        let mut t3 = Comp2::<(), u32, u32>::default();
+
+        let id = a.create();
+        t1.insert(id, 1);
+        t2.insert(id, (2, 3));
+        t3.insert(id, (5, 7));
+
+        t1.zip_to_comp2_and_comp2(&t2, &t3, |a, b, c, d, e| *a += (*b * *c) + (*d * *e));
+
+        assert_eq!(42, t1.values[0]);
     }
 }
