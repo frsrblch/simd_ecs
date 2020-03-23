@@ -1,9 +1,18 @@
 use super::*;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Comp1<ID, T> {
     pub values: Vec<T>,
     marker: PhantomData<ID>,
+}
+
+impl<ID, T> Default for Comp1<ID, T> {
+    fn default() -> Self {
+        Self {
+            values: Default::default(),
+            marker: PhantomData,
+        }
+    }
 }
 
 impl<ID, T> Insert<Id<ID>, T> for Comp1<ID, T> {

@@ -1,7 +1,13 @@
 use super::*;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct Comp2<ID, T1, T2>(pub Vec<T1>, pub Vec<T2>, PhantomData<ID>);
+
+impl<ID, T1, T2> Default for Comp2<ID, T1, T2> {
+    fn default() -> Self {
+        Self(Default::default(), Default::default(), PhantomData)
+    }
+}
 
 impl<ID, T1, T2> Insert<Id<ID>, (T1, T2)> for Comp2<ID, T1, T2> {
     fn insert(&mut self, id: Id<ID>, value: (T1, T2)) {
