@@ -22,6 +22,11 @@ impl<ID, T1, T2> Insert<&Id<ID>, (T1, T2)> for Comp2<ID, T1, T2> {
 }
 
 impl<ID, T1, T2> Comp2<ID, T1, T2> {
+    pub fn get(&self, id: Id<ID>) -> Option<(&T1, &T2)> {
+        self.0.get(id.index)
+            .and_then(|t1| self.1.get(id.index).map(|t2| (t1, t2)))
+    }
+
     fn insert_at_index(&mut self, index: usize, a: T1, b: T2) {
         debug_assert!(self.len() >= index);
         match self.len() {
@@ -48,6 +53,47 @@ impl<ID, T1, T2> Comp2<ID, T1, T2> {
             .zip(self.1.iter_mut())
             .zip(rhs.values.iter())
             .for_each(|((a, b), c)| f(a, b, c))
+    }
+
+    pub fn zip_to_comp1_and_comp1<T3, T4, F: Fn(&mut T1, &mut T2, &T3, &T4)>(&mut self, a: &Comp1<ID, T3>, b: &Comp1<ID, T4>, f: F) {
+        self.0.iter_mut()
+            .zip(self.1.iter_mut())
+            .zip(a.values.iter())
+            .zip(b.values.iter())
+            .for_each(|(((a, b), c), d)| f(a, b, c, d));
+    }
+
+    pub fn zip_to_comp2<T3, T4, F: Fn(&mut T1, &mut T2, &T3, &T4)>(&mut self, rhs: &Comp2<ID, T3, T4>, f: F) {
+        self.0.iter_mut()
+            .zip(self.1.iter_mut())
+            .zip(rhs.0.iter())
+            .zip(rhs.1.iter())
+            .for_each(|(((a, b), c), d)| {
+                f(a, b, c, d);
+            })
+    }
+
+    pub fn zip_to_comp1_and_comp2<T3, T4, T5, F: Fn(&mut T1, &mut T2, &T3, &T4, &T5)>(&mut self, comp1: &Comp1<ID, T3>, comp2: &Comp2<ID, T4, T5>, f: F) {
+        self.0.iter_mut()
+            .zip(self.1.iter_mut())
+            .zip(comp1.values.iter())
+            .zip(comp2.0.iter())
+            .zip(comp2.1.iter())
+            .for_each(|((((a, b), c), d), e)| {
+                f(a, b, c, d, e);
+            })
+    }
+}
+
+impl<ID, T1> Comp2<ID, T1, T1> {
+    pub fn zip_each_to_comp2<T2, F: Fn(&mut T1, &T2)>(&mut self, rhs: &Comp2<ID, T2, T2,>, f: F) {
+        self.0.iter_mut()
+            .zip(rhs.0.iter())
+            .for_each(|(a, b)| f(a, b));
+
+        self.1.iter_mut()
+            .zip(rhs.1.iter())
+            .for_each(|(a, b)| f(a, b));
     }
 }
 

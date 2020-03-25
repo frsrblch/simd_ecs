@@ -14,7 +14,7 @@ impl<T> FixedAllocator<T> {
     }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Id<T> {
     pub(crate) index: usize,
     marker: PhantomData<T>,
@@ -28,6 +28,14 @@ impl<T> Id<T> {
         }
     }
 }
+
+impl<T> Clone for Id<T> {
+    fn clone(&self) -> Self {
+        Self::new(self.index)
+    }
+}
+
+impl<T> Copy for Id<T> {}
 
 #[cfg(test)]
 mod tests {

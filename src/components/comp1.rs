@@ -47,11 +47,11 @@ impl<ID, T> Comp1<ID, T> {
         self.values.len()
     }
 
-    fn iter(&self) -> impl Iterator<Item = &T> {
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
         self.values.iter()
     }
 
-    fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
         self.values.iter_mut()
     }
 
