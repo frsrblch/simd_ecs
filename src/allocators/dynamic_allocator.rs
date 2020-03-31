@@ -1,11 +1,15 @@
-use std::marker::PhantomData;
 use std::num::NonZeroU32;
+use crate::allocators::{Indexes, Id};
+use crate::links::GenIds;
+use crate::components::Comp1;
+use crate::{Get1, Insert};
+use std::cmp::Ordering;
 
 #[derive(Debug, Default, Clone)]
 pub struct DynamicAllocator<T> {
-    gen: Vec<Gen>,
-    dead: Vec<usize>,
-    marker: PhantomData<T>,
+    pub(crate) gen: Comp1<T, Gen>,
+    dead: Vec<Id<T>>,
+    pub(crate) version: u64,
 }
 
 impl<T> DynamicAllocator<T> {
@@ -14,10 +18,10 @@ impl<T> DynamicAllocator<T> {
             let gen = self.gen.get(index).copied().unwrap_or_default();
             GenId::new(index, gen)
         } else {
-            let index = self.gen.len();
+            let index = Id::new(self.gen.len());
             let gen = Gen::default();
 
-            self.gen.push(gen);
+            self.gen.insert(index, gen);
 
             GenId::new(index, gen)
         }
@@ -30,6 +34,7 @@ impl<T> DynamicAllocator<T> {
                 self.dead.push(id.index);
             }
         }
+        self.version += 1;
     }
 
     pub fn is_valid(&self, id: &GenId<T>) -> bool {
@@ -38,22 +43,78 @@ impl<T> DynamicAllocator<T> {
             .map(|gen| *gen == id.gen)
             .unwrap_or(false)
     }
+
+    pub fn is_alive(&self, id: Id<T>, gen: Gen) -> bool {
+        self.gen
+            .get(id)
+            .map(|live| *live == gen)
+            .unwrap_or(false)
+    }
+
+    pub fn validate<'a, ID2>(&'a self, ids: &'a mut GenIds<ID2, T>) -> Valid<'a, ID2, T> {
+        ids.update(&self);
+        Valid::new(&ids.ids.0)
+    }
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug)]
 pub struct GenId<T> {
-    pub(crate) index: usize,
+    pub(crate) index: Id<T>,
     pub(crate) gen: Gen,
-    marker: PhantomData<T>,
 }
 
 impl<T> GenId<T> {
-    fn new(index: usize, gen: Gen) -> Self {
+    fn new(index: Id<T>, gen: Gen) -> Self {
         Self {
             index,
             gen,
-            marker: PhantomData,
         }
+    }
+}
+
+impl<T> Clone for GenId<T> {
+    fn clone(&self) -> Self {
+        Self::new(self.index, self.gen)
+    }
+}
+
+impl<T> Copy for GenId<T> {}
+
+impl<T> PartialEq for GenId<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.index.eq(&other.index)
+    }
+}
+
+impl<T> Eq for GenId<T> {}
+
+impl<T> std::hash::Hash for GenId<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        (self.index, self.gen).hash(state)
+    }
+}
+
+impl<T> PartialOrd for GenId<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<T> Ord for GenId<T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (self.index, self.gen).cmp(&(other.index, other.gen))
+    }
+}
+
+impl<'a, T> Indexes<T> for GenId<T> {
+    fn index(&self) -> usize {
+        self.index.index
+    }
+}
+
+impl<'a, T> Indexes<T> for &'a GenId<T> {
+    fn index(&self) -> usize {
+        self.index.index
     }
 }
 
@@ -73,6 +134,19 @@ impl Gen {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct Valid<'a, FROM, TO> {
+    pub ids: &'a Comp1<FROM, Option<Id<TO>>>,
+}
+
+impl<'a, FROM, TO> Valid<'a, FROM, TO> {
+    fn new(ids: &'a Comp1<FROM, Option<Id<TO>>>) -> Self {
+        Valid {
+            ids,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -82,10 +156,10 @@ mod tests {
         let mut a = DynamicAllocator::<()>::default();
 
         let id0 = a.create();
-        let id1 = a.create();
+        assert_eq!(GenId::new(Id::new(0), Gen::default()), id0);
 
-        assert_eq!(GenId::new(0, Gen::default()), id0);
-        assert_eq!(GenId::new(1, Gen::default()), id1);
+        let id1 = a.create();
+        assert_eq!(GenId::new(Id::new(1), Gen::default()), id1);
     }
 
     #[test]
@@ -96,6 +170,6 @@ mod tests {
         a.kill(id0);
         let id1 = a.create();
 
-        assert_eq!(GenId::new(0, Gen::default().next()), id1);
+        assert_eq!(GenId::new(Id::new(0), Gen::default().next()), id1);
     }
 }

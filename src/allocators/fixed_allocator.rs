@@ -1,4 +1,9 @@
 use std::marker::PhantomData;
+use std::cmp::Ordering;
+
+pub trait Indexes<ID>: Copy {
+    fn index(&self) -> usize;
+}
 
 #[derive(Debug, Default, Clone)]
 pub struct FixedAllocator<T> {
@@ -14,18 +19,44 @@ impl<T> FixedAllocator<T> {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug)]
 pub struct Id<T> {
     pub(crate) index: usize,
     marker: PhantomData<T>,
 }
 
 impl<T> Id<T> {
-    fn new(index: usize) -> Self {
+    pub(crate) fn new(index: usize) -> Self {
         Self {
             index,
             marker: PhantomData,
         }
+    }
+}
+
+impl<T> PartialEq for Id<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.index.eq(&other.index)
+    }
+}
+
+impl<T> Eq for Id<T> {}
+
+impl<T> std::hash::Hash for Id<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.index.hash(state)
+    }
+}
+
+impl<T> PartialOrd for Id<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.index.partial_cmp(&other.index)
+    }
+}
+
+impl<T> Ord for Id<T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.index.cmp(&other.index)
     }
 }
 
@@ -36,6 +67,19 @@ impl<T> Clone for Id<T> {
 }
 
 impl<T> Copy for Id<T> {}
+
+impl<ID> Indexes<ID> for Id<ID> {
+    fn index(&self) -> usize {
+        self.index
+    }
+}
+
+impl<'a, ID> Indexes<ID> for &'a Id<ID> {
+    fn index(&self) -> usize {
+        self.index
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
