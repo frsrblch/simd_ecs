@@ -1,7 +1,38 @@
 use simd_ecs::prelude::*;
 use physics::*;
 
-fn main() {}
+pub fn main() {
+    let mut world = World::default();
+
+    let sol = world.create_system(SystemRow {
+        name: "Sol".to_string(),
+        star_radius: Length::in_meters(696340e3),
+        star_temp: Temperature::in_kelvin(5778.0),
+    });
+
+    let earth = world.create_planet(BodyRow {
+            name: "Earth".to_string(),
+            mass: Default::default(),
+            radius: Default::default(),
+            orbit_period: Default::default(),
+            orbit_radius: Default::default(),
+            orbit_offset: Default::default()
+        },
+        sol);
+
+    let _moon = world.create_body(BodyRow {
+        name: "Luna".to_string(),
+        mass: Default::default(),
+        radius: Default::default(),
+        orbit_period: Default::default(),
+        orbit_radius: Default::default(),
+        orbit_offset: Default::default()
+    },
+    sol,
+    Some(earth));
+
+    world.state.body.update_position(Time::zero());
+}
 
 #[derive(Debug, Default, Clone)]
 pub struct World {
@@ -9,9 +40,25 @@ pub struct World {
     pub state: State,
 }
 
+impl World {
+    pub fn create_system(&mut self, system: SystemRow) -> Id<System> {
+        self.state.system.create(&mut self.alloc.system, system)
+    }
+
+    pub fn create_body<I: Into<BodyRow>>(&mut self, body: I, system: Id<System>, parent: Option<Id<Body>>) -> Id<Body> {
+        self.state.body.create(&mut self.alloc.body, body.into(), system, parent)
+    }
+
+    pub fn create_planet(&mut self, body: BodyRow, system: Id<System>) -> Id<Body> {
+        self.create_body(body, system, None)
+    }
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct Allocators {
     pub system: FixedAllocator<System>,
+    pub body: FixedAllocator<Body>,
+    pub colony: DynamicAllocator<Colony>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -99,8 +146,7 @@ impl Body {
     }
 
     fn calculate_relative_position(&mut self, time: Time) {
-        self.position.0.iter_mut()
-            .zip(self.position.1.iter_mut())
+        self.position.iter_mut()
             .zip(self.orbit_period.iter())
             .zip(self.orbit_radius.iter())
             .zip(self.orbit_offset.iter())
@@ -120,9 +166,10 @@ impl Body {
     fn update_parent_position(&mut self) {
         let position = &self.position;
         let orbit_parent = &self.orbit_parent;
-        self.parent_position.zip_to_comp1(
-            orbit_parent,
-            |x, y, parent| {
+
+        self.parent_position.iter_mut()
+            .zip(orbit_parent.iter())
+            .for_each(|((x, y), parent)| {
                 *x = Length::zero();
                 *y = Length::zero();
                 let mut parent = *parent;
@@ -135,7 +182,12 @@ impl Body {
     }
 
     fn calculate_absolute_position(&mut self) {
-        self.position.zip_each_to_comp2(&self.parent_position, |body, parent| *body += *parent);
+        self.position.iter_mut()
+            .zip(self.parent_position.iter())
+            .for_each(|((x, y), (px, py))| {
+                *x = *px;
+                *y = *py;
+            });
     }
 }
 

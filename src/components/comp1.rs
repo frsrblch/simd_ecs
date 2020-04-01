@@ -1,6 +1,5 @@
 use super::*;
 use crate::allocators::{Indexes, Valid};
-// use crate::allocators::{Gen, DynamicAllocator};
 
 #[derive(Debug, Clone)]
 pub struct Comp1<ID, T> {
@@ -63,8 +62,6 @@ impl<ID, T> Get1<&Option<Id<ID>>, T> for Comp1<ID, T> {
     }
 }
 
-// TODO Insert<Valid>
-
 impl<ID, T> Comp1<ID, T> {
     fn get_index(&self, index: usize) -> Option<&T> {
         self.values.get(index)
@@ -98,89 +95,21 @@ impl<ID, T> Comp1<ID, T> {
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
         self.values.iter_mut()
     }
-
-    pub fn zip_to_comp1<T2, F: Fn(&mut T, &T2)>(&mut self, rhs: &Comp1<ID, T2>, f: F) {
-        self.iter_mut()
-            .zip(rhs.iter())
-            .for_each(|(a, b)| f(a, b))
-    }
-
-    pub fn zip_to_comp1_by_2<T2, T3, F: Fn(&mut T, &T2, &T3)>(
-        &mut self,
-        a: &Comp1<ID, T2>,
-        b: &Comp1<ID, T3>,
-        f: F,
-    ) {
-        self.iter_mut()
-            .zip(a.iter())
-            .zip(b.iter())
-            .for_each(|((a, b), c)| f(a, b, c));
-    }
-
-    pub fn zip_to_comp1_by_3<T2, T3, T4, F: Fn(&mut T, &T2, &T3, &T4)>(
-        &mut self,
-        a: &Comp1<ID, T2>,
-        b: &Comp1<ID, T3>,
-        c: &Comp1<ID, T4>,
-        f: F,
-    ) {
-        self.iter_mut()
-            .zip(a.iter())
-            .zip(b.iter())
-            .zip(c.iter())
-            .for_each(|(((a, b), c), d)| f(a, b, c, d));
-    }
-
-    pub fn zip_to_comp1_by_4<T2, T3, T4, T5, F: Fn(&mut T, &T2, &T3, &T4, &T5)>(
-        &mut self,
-        a: &Comp1<ID, T2>,
-        b: &Comp1<ID, T3>,
-        c: &Comp1<ID, T4>,
-        d: &Comp1<ID, T5>,
-        f: F,
-    ) {
-        self.iter_mut()
-            .zip(a.iter())
-            .zip(b.iter())
-            .zip(c.iter())
-            .zip(d.iter())
-            .for_each(|((((a, b), c), d), e)| f(a, b, c, d, e));
-    }
-
-    pub fn zip_to_comp2<T2, T3, F: Fn(&mut T, &T2, &T3)>(
-        &mut self,
-        rhs: &Comp2<ID, T2, T3>,
-        f: F,
-    ) {
-        self.zip_to_comp1_by_2(&rhs.0, &rhs.1, f);
-    }
-
-    pub fn zip_to_comp1_and_comp2<T2, T3, T4, F: Fn(&mut T, &T2, &T3, &T4)>(
-        &mut self,
-        a: &Comp1<ID, T2>,
-        b: &Comp2<ID, T3, T4>,
-        f: F,
-    ) {
-        self.zip_to_comp1_by_3(a, &b.0, &b.1, f);
-    }
-
-    pub fn zip_to_comp2_and_comp2<T2, T3, T4, T5, F: Fn(&mut T, &T2, &T3, &T4, &T5)>(
-        &mut self,
-        a: &Comp2<ID, T2, T3>,
-        b: &Comp2<ID, T4, T5>,
-        f: F,
-    ) {
-        self.zip_to_comp1_by_4(&a.0, &a.1, &b.0, &b.1, f);
-    }
 }
 
 impl<ID1, T: Copy> Comp1<ID1, T> {
     pub fn get_from<ID2>(&mut self, rhs: &Comp1<ID2, T>, ids: &Comp1<ID1, Id<ID2>>) {
-        self.zip_to_comp1(ids, |value, id| {
-            if let Some(v) = rhs.get(id) {
-                *value = *v;
-            }
-        });
+        self.iter_mut()
+            .zip(ids.iter())
+            .for_each(|(value, id)| {
+                rhs.get(id).map(|v| *value = *v);
+
+                *value = *rhs.get(id).unwrap_or(value);
+
+                if let Some(v) = rhs.get(id) {
+                    *value = *v;
+                }
+            });
     }
 
     pub fn get_from_or<ID2>(&mut self, rhs: &Comp1<ID2, T>, ids: &Valid<ID1, ID2>, fallback: T) {
