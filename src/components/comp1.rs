@@ -113,7 +113,7 @@ impl<ID1, T: Copy> Comp1<ID1, T> {
     }
 
     pub fn get_from_or<ID2>(&mut self, rhs: &Comp1<ID2, T>, ids: &Valid<ID1, ID2>, fallback: T) {
-        self.values.iter_mut()
+        self.iter_mut()
             .zip(ids.ids.iter())
             .for_each(|(v, id)|
                 *v = id.and_then(|id| rhs.get(id))
@@ -139,7 +139,9 @@ mod tests {
         t1.insert(id, 2);
         t2.insert(id, 3);
 
-        t1.zip_to_comp1(&t2, |a, b| *a += *b);
+        t1.iter_mut()
+            .zip(t2.iter())
+            .for_each(|(a, b)| *a += *b);
 
         assert_eq!(5, t1.values[0]);
     }
@@ -157,7 +159,10 @@ mod tests {
         t2.insert(id, 3);
         t3.insert(id, 5);
 
-        t1.zip_to_comp1_by_2(&t2, &t3, |a, b, c| *a += *b * *c);
+        t1.iter_mut()
+            .zip(t2.iter())
+            .zip(t3.iter())
+            .for_each(|((a, b), c)| *a += *b * *c);
 
         assert_eq!(17, t1.values[0]);
     }
@@ -173,7 +178,9 @@ mod tests {
         t1.insert(id, 2);
         t2.insert(id, (3, 5));
 
-        t1.zip_to_comp2(&t2,|a, b, c| *a += *b * *c);
+        t1.iter_mut()
+            .zip(t2.iter())
+            .for_each(|(a, (b, c))| *a += *b * *c);
 
         assert_eq!(17, t1.values[0]);
     }
@@ -191,7 +198,10 @@ mod tests {
         t2.insert(id, 7);
         t3.insert(id, (3, 5));
 
-        t1.zip_to_comp1_and_comp2(&t2, &t3, |a, b, c, d| *a += *b + (*c * *d));
+        t1.iter_mut()
+            .zip(t2.iter())
+            .zip(t3.iter())
+            .for_each(|((a, b), (c, d))| *a += *b + (*c * *d));
 
         assert_eq!(24, t1.values[0]);
     }
@@ -209,7 +219,10 @@ mod tests {
         t2.insert(id, (2, 3));
         t3.insert(id, (5, 7));
 
-        t1.zip_to_comp2_and_comp2(&t2, &t3, |a, b, c, d, e| *a += (*b * *c) + (*d * *e));
+        t1.iter_mut()
+            .zip(t2.iter())
+            .zip(t3.iter())
+            .for_each(|((a, (b, c)), (d, e))| *a += (*b * *c) + (*d * *e));
 
         assert_eq!(42, t1.values[0]);
     }

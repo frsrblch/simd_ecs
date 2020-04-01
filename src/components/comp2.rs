@@ -1,5 +1,5 @@
 use super::*;
-use crate::allocators::{Indexes, Gen};
+use crate::allocators::{Indexes, Gen, Valid};
 
 #[derive(Debug, Clone)]
 pub struct Comp2<ID, T1, T2>(pub Comp1<ID, T1>, pub Comp1<ID, T2>);
@@ -81,6 +81,44 @@ impl<ID, T1, T2> Comp2<ID, T1, T2> {
     }
 }
 
+impl<ID, T1: Copy, T2: Copy> Comp2<ID, T1, T2> {
+    pub fn get_from<ID2>(&mut self, rhs: &Comp2<ID2, T1, T2>, ids: Comp1<ID, Id<ID2>>) {
+        self.0.iter_mut()
+            .zip(ids.iter())
+            .for_each(|(value, id)| {
+                if let Some(v) = rhs.0.get(id) {
+                    *value = *v;
+                }
+            });
+
+        self.1.iter_mut()
+            .zip(ids.iter())
+            .for_each(|(value, id)| {
+                if let Some(v) = rhs.1.get(id) {
+                    *value = *v;
+                }
+            });
+    }
+
+    pub fn get_from_or<ID2>(&mut self, rhs: &Comp2<ID2, T1, T2>, ids: &Valid<ID, ID2>, fallback: (T1, T2)) {
+        self.0.iter_mut()
+            .zip(ids.ids.iter())
+            .for_each(|(value, id)| {
+                *value = id.and_then(|id| rhs.0.get(id))
+                    .copied()
+                    .unwrap_or(fallback.0)
+            });
+
+        self.1.iter_mut()
+            .zip(ids.ids.iter())
+            .for_each(|(value, id)| {
+                *value = id.and_then(|id| rhs.1.get(id))
+                    .copied()
+                    .unwrap_or(fallback.1)
+            });
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -97,10 +135,12 @@ mod tests {
         t1.insert(id, (5, 7));
         t2.insert(id, 2);
 
-        t1.zip_to_comp1(&t2,|a, b, c| {
-            *a += *c;
-            *b += *c;
-        });
+        t1.iter_mut()
+            .zip(t2.iter())
+            .for_each(|((a, b), c)| {
+                *a += *c;
+                *b += *c;
+            });
 
         assert_eq!(7, t1.0.values[0]);
         assert_eq!(9, t1.1.values[0]);
